@@ -250,6 +250,7 @@ struct branch_info {
 	char *remote_name;
 	struct string_list merge;
 	enum rebase_type rebase;
+	char *push_remote_name;
 };
 
 static struct string_list branch_list = STRING_LIST_INIT_NODUP;
@@ -270,7 +271,7 @@ static int config_read_branches(const char *key, const char *value, void *cb)
 	char *name;
 	struct string_list_item *item;
 	struct branch_info *info;
-	enum { REMOTE, MERGE, REBASE } type;
+	enum { REMOTE, MERGE, REBASE, PUSH_REMOTE } type;
 	size_t key_len;
 
 	key += strlen("branch.");
@@ -280,6 +281,8 @@ static int config_read_branches(const char *key, const char *value, void *cb)
 		type = MERGE;
 	else if (strip_suffix(key, ".rebase", &key_len))
 		type = REBASE;
+	if (strip_suffix(key, ".pushremote", &key_len))
+		type = PUSH_REMOTE;
 	else
 		return 0;
 	name = xmemdupz(key, key_len);
@@ -310,6 +313,11 @@ static int config_read_branches(const char *key, const char *value, void *cb)
 	}
 	case REBASE:
 		info->rebase = rebase_parse_value(value);
+		break;
+	case PUSH_REMOTE:
+		if (info->push_remote_name)
+			warning(_("more than one %s"), orig_key);
+		info->push_remote_name = xstrdup(value);
 		break;
 	default:
 		BUG("unexpected type=%d", type);
@@ -676,6 +684,11 @@ static int mv(int argc, const char **argv)
 		if (info->remote_name && !strcmp(info->remote_name, rename.old_name)) {
 			strbuf_reset(&buf);
 			strbuf_addf(&buf, "branch.%s.remote", item->string);
+			git_config_set(buf.buf, rename.new_name);
+		}
+		if (info->push_remote_name && !strcmp(info->push_remote_name, rename.old_name)) {
+			strbuf_reset(&buf);
+			strbuf_addf(&buf, "branch.%s.pushremote", item->string);
 			git_config_set(buf.buf, rename.new_name);
 		}
 	}
