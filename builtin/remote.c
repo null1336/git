@@ -611,6 +611,29 @@ static int migrate_file(struct remote *remote)
 	return 0;
 }
 
+struct push_default_info
+{
+	struct rename_info *rename;
+	enum config_scope scope;
+	struct strbuf* origin;
+	int linenr;
+};
+
+static int config_read_push_default(const char *key, const char *value,
+	void *cb)
+{
+	struct push_default_info* info = cb;
+	if (strcmp(key, "remote.pushdefault") || strcmp(value, info->rename->old_name))
+		return 0;
+
+	info->scope = current_config_scope();
+	strbuf_reset(info->origin);
+	strbuf_addstr(info->origin, current_config_name());
+	info->linenr = current_config_line();
+
+	return 0;
+}
+
 static int mv(int argc, const char **argv)
 {
 	struct option options[] = {
@@ -746,6 +769,26 @@ static int mv(int argc, const char **argv)
 			die(_("creating '%s' failed"), buf.buf);
 	}
 	string_list_clear(&remote_branches, 1);
+
+	struct push_default_info push_default;
+	push_default.rename = &rename;
+	push_default.scope = CONFIG_SCOPE_UNKNOWN;
+	push_default.origin = &buf;
+	git_config(config_read_push_default, &push_default);
+	if (push_default.scope >= CONFIG_SCOPE_CMDLINE)
+		; /* pass */
+	else if (push_default.scope >= CONFIG_SCOPE_REPO) {
+		git_config_set("remote.pushDefault", rename.new_name);
+	} else if (push_default.scope >= CONFIG_SCOPE_SYSTEM) {
+		/* warn */
+		warning(_("The %s configuration remote.pushDefault in:\n"
+			  "\t%s:%d\n"
+			  "now names the non-existent remote '%s'"),
+			config_scope_name(push_default.scope),
+			push_default.origin->buf, push_default.linenr,
+			rename.old_name);
+	}
+
 	return 0;
 }
 
