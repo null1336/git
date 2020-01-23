@@ -264,15 +264,15 @@ static const char *abbrev_ref(const char *name, const char *prefix)
 
 static int config_read_branches(const char *key, const char *value, void *cb)
 {
-	if (!starts_with(key, "branch."))
-		return 0;
-
 	const char *orig_key = key;
 	char *name;
 	struct string_list_item *item;
 	struct branch_info *info;
 	enum { REMOTE, MERGE, REBASE, PUSH_REMOTE } type;
 	size_t key_len;
+
+	if (!starts_with(key, "branch."))
+		return 0;
 
 	key += strlen("branch.");
 	if (strip_suffix(key, ".remote", &key_len))
