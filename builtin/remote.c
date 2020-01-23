@@ -644,6 +644,7 @@ static int mv(int argc, const char **argv)
 		old_remote_context = STRBUF_INIT;
 	struct string_list remote_branches = STRING_LIST_INIT_DUP;
 	struct rename_info rename;
+	struct push_default_info push_default;
 	int i, refspec_updated = 0;
 
 	if (argc != 3)
@@ -770,7 +771,6 @@ static int mv(int argc, const char **argv)
 	}
 	string_list_clear(&remote_branches, 1);
 
-	struct push_default_info push_default;
 	push_default.rename = &rename;
 	push_default.scope = CONFIG_SCOPE_UNKNOWN;
 	push_default.origin = &buf;
