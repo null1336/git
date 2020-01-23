@@ -737,12 +737,62 @@ test_expect_success 'rename a remote' '
 	git clone one four &&
 	(
 		cd four &&
+		test_config_global remote.pushDefault origin &&
+		git config branch.master.pushRemote origin &&
 		git remote rename origin upstream &&
 		test -z "$(git for-each-ref refs/remotes/origin)" &&
 		test "$(git symbolic-ref refs/remotes/upstream/HEAD)" = "refs/remotes/upstream/master" &&
 		test "$(git rev-parse upstream/master)" = "$(git rev-parse master)" &&
 		test "$(git config remote.upstream.fetch)" = "+refs/heads/*:refs/remotes/upstream/*" &&
-		test "$(git config branch.master.remote)" = "upstream"
+		test "$(git config branch.master.remote)" = "upstream" &&
+		test "$(git config branch.master.pushRemote)" = "upstream" &&
+		test "$(git config --global remote.pushDefault)" = "origin"
+	)
+'
+
+test_expect_success 'rename a remote renames repo remote.pushDefault' '
+	git clone one four.1 &&
+	(
+		cd four.1 &&
+		git config remote.pushDefault origin &&
+		git remote rename origin upstream &&
+		test "$(git config remote.pushDefault)" = "upstream"
+	)
+'
+
+test_expect_success 'rename a remote keeps global remote.pushDefault' '
+	git clone one four.2 &&
+	(
+		cd four.2 &&
+		test_config_global remote.pushDefault origin &&
+		git config remote.pushDefault other &&
+		git remote rename origin upstream &&
+		test "$(git config --global remote.pushDefault)" = "origin" &&
+		test "$(git config remote.pushDefault)" = "other"
+	)
+'
+
+test_expect_success 'rename a remote renames repo remote.pushDefault but ignores global' '
+	git clone one four.3 &&
+	(
+		cd four.3 &&
+		test_config_global remote.pushDefault other &&
+		git config remote.pushDefault origin &&
+		git remote rename origin upstream &&
+		test "$(git config --global remote.pushDefault)" = "other" &&
+		test "$(git config remote.pushDefault)" = "upstream"
+	)
+'
+
+test_expect_success 'rename a remote renames repo remote.pushDefault but keeps global' '
+	git clone one four.4 &&
+	(
+		cd four.4 &&
+		test_config_global remote.pushDefault origin &&
+		git config remote.pushDefault origin &&
+		git remote rename origin upstream &&
+		test "$(git config --global remote.pushDefault)" = "origin" &&
+		test "$(git config remote.pushDefault)" = "upstream"
 	)
 '
 
